@@ -1,0 +1,51 @@
+## Services
+google_analytics:
+duoshuo: 'mengzs'
+
+## Meta
+rss: http://moon.nju.edu.cn/spar/people/mzs/mzs.html
+favicon: /blog.jpg
+icon: /blog.jpg
+source_url:
+license:
+  name: 'CC BY-NC-SA 3.0'
+  url: 'http://creativecommons.org/licenses/by-nc-sa/3.0/cn'
+
+## Menus
+menus:
+  '首页': /
+  '相册': /photo_album/
+  '关于我': http://moon.nju.edu.cn/spar/people/mzs/mzs.html
+
+right_menus:
+  'RSS': /atom.xml
+
+## Banners && Widgets
+banners:
+
+widgets:
+  -
+    markdown: |
+      cser，码农
+
+      * 交流经验
+      
+      * 记录生活
+
+
+  -
+    tags: true
+
+  -
+    archives: true
+
+  -
+    markdown:
+      <iframe width="100%" height="210" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=210&fansRow=2&ptype=1&speed=0&skin=5&isTitle=0&noborder=0&isWeibo=1&isFans=0&uid=2181239377&verifier=05803203&dpc=1"></iframe>
+
+
+## SNS (Work in progress)
+sns:
+  outlook-mail: nju.mzs@outlook.com
+  gmail: mengzs.com
+  facebook: mengzhanshuai
