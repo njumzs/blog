@@ -73,8 +73,8 @@ theme: simpleblock
 deploy:
   type: rsync
   host: 192.241.228.147
-  user: docker
-  root: /home/docker/sites/blog
+  user: mzsvps
+  root: /home/mzsvps/sites/blog
 
 feed:
   type: atom
