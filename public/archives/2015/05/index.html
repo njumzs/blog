@@ -1,0 +1,78 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/blog.jpg"><link rel="alternate" type="application/rss+xml" title="mzs的博客" href="http://moon.nju.edu.cn/spar/people/mzs/mzs.html"><link rel="stylesheet" href="/styles.css"><title>归档：2015 年 5 月 | mzs的博客</title></head><body><div class="container"><div class="columns page-header"><h1>mzs的博客</h1></div><div class="columns"><div class="navigation"><nav class="menus-main"><a href="/" class="favicon"><img alt="mzs的博客" src="/blog.jpg"></a><a href="/">首页</a><a href="/album_list/">相册</a><a href="http://moon.nju.edu.cn/spar/people/mzs/mzs.html">关于我</a></nav><nav class="right menus-right"><a href="/atom.xml">RSS</a></nav></div></div><div class="columns"><div class="block-body column three-fourths"><div class="archive-title"><strong>归档 2015 年 5 月</strong></div><article><header><h2><a href="/2015/05/26/say-bye/">告别季</a></h2></header><div class="article-meta clearfix"><time class="left">2015-05-26</time><ul class="tags left"></ul><ul class="tags right"><li><a href="/tags/生活/">生活</a></li></ul></div><div class="markdown-body"><p>今天是5月26号，周二，刚刚交掉毕业论文还不久。也恰好在一周之前，我从家里返回南京，走出站口，静默立在玄武湖畔，浸润着空气中氤氲着的大团湿气，不远处的紫峰大厦在雾霭里若隐若现，偌大的城市里，无边际的渺小感无力感纷至袭来，我竟会分外失落。</p>
+<p>回家是送奶奶走最后一程的。尽管在我们的民族里，死亡永远是一种禁忌，所有涉及到生死的话题都应该是沉痛的．但是回去之前，我还是给自己找了一千个不要哭出来的理由。可是真等到诀别那天，老人颤颤巍巍的样子终于隐隐约约出现在眼前，念想最后几年健在的时候，每次回去临走时，爷爷奶奶站在车门口流连不舍的情形，光影交错，恍若昨日，我一头扎进记忆的堆里拔不出来，防御的墙被连根拔起，彻底摧毁，哭得稀里哗啦。对孱弱生命的敬畏，就像面对无边暗夜里风中摇曳的残烛，你知道它很快会灭，可是总想，光明总是好的，还是灭得晚些罢。</p>
+<p>老家院子里有一颗杏树，许多年之前，爷爷奶奶都在的那些夏天，他们总是细心照看着来来往往的路人，想要把最好吃的大黄杏留给他们的儿孙。大家都在外边奔波忙碌，一年到头回去的次数很少，所以这种细微的感情从未被悉心察觉感怀领悟。如今，豌豆大小的的绿果子依旧缀满枝头，格外丰硕繁盛，可是曾经呵护过它们的主人却都不在了，抽丝剥茧般地一下子抽离了偌大院子里的最后一丝人气。摘几颗放在嘴里，很酸很涩．不知道到这个夏天也要溜掉的时候，还会存留多少果子在摇曳依旧的枝头，大概也没人会在意了吧．</p>
+<p>有一年，这棵树的一个枝桠死掉了，爷爷一把板斧把它砍了去，整棵树才幸免于难活到现在，长得愈发健壮。如今，它竟成了这座孤零零院子里的主人，阳光透过大片的叶子落在地上，变得斑驳摇曳，跳动的光影里勾连起关于这座院子数不尽的斑驳的记忆。</p>
+<p>终于到了和本科生活道别的时候，也很快要和一大批小伙伴说再见了．爷爷奶奶生于斯长于斯葬于斯的黄土地，那里我残留的童年，流逝的过往，若和他们有一线牵连，也是要一并再见了的．可是我还有新的一段路要接着走下去．</p>
+</div></article><article><header><h2><a href="/2015/05/04/nagios-mysql/">nagios dockerfile添加mysql监控</a></h2></header><div class="article-meta clearfix"><time class="left">2015-05-04</time><ul class="tags left"></ul><ul class="tags right"><li><a href="/tags/nagios/">nagios</a></li><li><a href="/tags/mysql/">mysql</a></li><li><a href="/tags/docker/">docker</a></li></ul></div><div class="markdown-body"><h2 id="配置过程"><a href="#配置过程" class="headerlink" title="配置过程:"></a>配置过程:</h2><p>确保nagios宿主机即监控主节点安装了mysql-client，被监控节点不需要安装任何插件,只需要mysql service正常running即可。首先确保有这样的一个user(以下的操作发生在被监控节点):</p>
+<p>The following command will create a user named “nagios” with a password “password” and grant him access on the local MySQL DB.</p>
+<pre><code>CREATE USER &apos;nagios&apos;@&apos;localhost&apos; IDENTIFIED BY &apos;password&apos;; 
+</code></pre><p>The following command issues full permissions to the nagios user.</p>
+<pre><code>GRANT USAGE ON *.* TO &apos;nagios&apos;@&apos;localhost&apos;;
+</code></pre><p>The following command will create a user named “nagios” with a password “password” and allow him to access the DB from any (%) location.</p>
+<pre><code>CREATE USER &apos;nagios&apos;@&apos;%&apos; IDENTIFIED BY &apos;password&apos;; 
+</code></pre><p>The following command issues full permissions to the nagios user from any location.</p>
+<pre><code>GRANT USAGE ON *.* TO &apos;nagios&apos;@&apos;%&apos;;
+
+flush privileges;
+</code></pre><p>我使用的是<strong>CREATE USER ‘nagios’@’%’ IDENTIFIED BY ‘password’;</strong> </p>
+<p>此外,注释掉mysql配置文件my.cnf中如下一行,</p>
+<pre><code>bind-address   =   127.0.0.1
+</code></pre><h2 id="在dockerfile里边添加-以下的操作都发生在nagios主节点"><a href="#在dockerfile里边添加-以下的操作都发生在nagios主节点" class="headerlink" title="在dockerfile里边添加(以下的操作都发生在nagios主节点)"></a>在dockerfile里边添加(以下的操作都发生在nagios主节点)</h2><p><strong>RUN wget <a href="http://labs.consol.de/download/shinken-nagios-plugins/check_mysql_health-2.1.8.2.tar.gz" target="_blank" rel="external">http://labs.consol.de/download/shinken-nagios-plugins/check_mysql_health-2.1.8.2.tar.gz</a> &amp;&amp; tar -xvzf check_mysql_health-2.1.8.2.tar.gz &amp;&amp; cd check_mysql_health-2.1.8.2 &amp;&amp;  ./configure –with-nagios-user=${NAGIOS_USER} –with-nagios-group=${NAGIOS_USER} &amp;&amp; make &amp;&amp; make install</strong></p>
+<p>编译安装软件之后,在<strong>/usr/local/nagios/libexec</strong>可以看到 check_mysql_health插件(默认安装)</p>
+<p>在<strong>remotehost.cfg</strong>中添加command和service</p>
+<pre><code>define command{
+command_name check_mysql_health
+command_line $USER1$/check_mysql_health --hostname $HOSTADDRESS$ --port $ARG1$ --username $ARG2$ --         password $ARG3$ --mode $ARG4$ 
+}
+
+define service{
+use generic-service
+host_name localhost
+service_description MySQL_threads-connected
+check_command check_mysql_health!3306!user!password!threads-connected
+}
+
+define service{
+use generic-service
+host_name localhost
+service_description MySQL_connection-time
+check_command check_mysql_health!3306!user!password!connection-time
+}
+
+define service{
+use generic-service
+host_name localhost
+service_description MySQL_uptime
+check_command check_mysql_health!3306!user!password!uptime
+}
+</code></pre><p>注：</p>
+<ul>
+<li>user和password具体替换<br>*hots_name具体指定</li>
+</ul>
+<p>然后运行</p>
+<pre><code>service nagios restart
+</code></pre><p>注意,在command的定义中,还可以添加的参数包括:</p>
+<ul>
+<li>–database  dbname (默认是information_schema )</li>
+<li>–warning  range</li>
+<li>–critical range </li>
+</ul>
+<p>相应的,在service定义中就可以多使用!符号把参数传进去,后俩个具体数值我不清楚设置多少合适,所以就使用了默认值<br>,这样应该就可以了</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接:"></a>参考链接:</h2><ul>
+<li><a href="http://labs.consol.de/nagios/check_mysql_health/" target="_blank" rel="external">文档一</a></li>
+<li><a href="http://exchange.nagios.org/directory/MySQL/check_mysql_health/details" target="_blank" rel="external">文档二</a></li>
+<li><a href="http://www.yoyoclouds.com/2014/08/monitoring-mysql-using-nagios.html" target="_blank" rel="external">monitoring mysql usingnagios</a></li>
+</ul>
+</div></article><div class="archive-pagination"><div class="paginator"><span class="page-number current">1</span><a class="page-number" href="/archives/2015/05/page/2/">2</a><a class="extend next" rel="next" href="/archives/2015/05/page/2/">&raquo;</a></div></div></div><div class="block-sidebar column one-fourth"><script>(function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);})(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st'); _st('install','4iWYoyCGR2xYxThDee2u','2.0.0');
+</script><div class="widget text-content"><p>cser，码农</p>
+<ul>
+<li><p>交流经验</p>
+</li>
+<li><p>记录生活</p>
+</li>
+</ul>
+</div><div class="widget tags"><ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Android/">Android</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/docker/">docker</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/gitlab/">gitlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/">linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql/">mysql</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nagios/">nagios</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nginx/">nginx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ssh/">ssh</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/vpn-server/">vpn server</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/生活/">生活</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/记录/">记录</a></li></ul></div><div class="widget archives"><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">四月 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">三月 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/02/">二月 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">七月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li></ul></div><div class="widget text-content"><p>Links</p>
+<p><a href="http://answ.me">安大哥</a></p>
+<p><a href="http://cshuo.xyz">cshuo</a></p>
+</div><div class="widget text-content"><iframe width="100%" height="250" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=210&fansRow=2&ptype=1&speed=0&skin=5&isTitle=0&noborder=0&isWeibo=1&isFans=0&uid=2181239377&verifier=05803203&dpc=1"></iframe></div><div class="widget text-content"><script>var cnzz_protocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cspan id='cnzz_stat_icon_1255937628'%3E%3C/span%3E%3Cscript src='" + cnzz_protocol + "s95.cnzz.com/z_stat.php%3Fid%3D1255937628' type='text/javascript'%3E%3C/script%3E"));</script><script>(function(){var bp = document.createElement('script');bp.src = '//push.zhanzhang.baidu.com/push.js';var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(bp, s);})();</script></div></div></div></div><script>window.duoshuoQuery = {short_name: 'mengzs'}</script><script src="https://static.duoshuo.com/embed.js"></script></body></html>

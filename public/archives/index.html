@@ -1,0 +1,47 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/blog.jpg"><link rel="alternate" type="application/rss+xml" title="mzs的博客" href="http://moon.nju.edu.cn/spar/people/mzs/mzs.html"><link rel="stylesheet" href="/styles.css"><title>mzs的博客</title></head><body><div class="container"><div class="columns page-header"><h1>mzs的博客</h1></div><div class="columns"><div class="navigation"><nav class="menus-main"><a href="/" class="favicon"><img alt="mzs的博客" src="/blog.jpg"></a><a href="/">首页</a><a href="/album_list/">相册</a><a href="http://moon.nju.edu.cn/spar/people/mzs/mzs.html">关于我</a></nav><nav class="right menus-right"><a href="/atom.xml">RSS</a></nav></div></div><div class="columns"><div class="block-body column three-fourths"><article><header><h2><a href="/2016/04/03/adb无线连接/">adb无线连接</a></h2></header><div class="article-meta clearfix"><time class="left">2016-04-03</time><ul class="tags left"></ul><ul class="tags right"><li><a href="/tags/Android/">Android</a></li></ul></div><div class="markdown-body"><p>用usb adb连接Android设备到pc,只要不小心一碰触接口,file system就弹出挂载信息,烦得要死,所以用wireless连接就没这个问题了.</p>
+<p>设备与主机能互相ping通,设备中下载终端模拟器,设备要有root权限,设备中指令如下:</p>
+<pre><code>su
+
+setprop service.adb.tcp.port 5555
+</code></pre><p>设置了监听的端口号是5555.</p>
+<p>在pc先启动adb daemon,输入指令:</p>
+<pre><code>adb tcpip 5555
+
+adb connect ip_of_android
+</code></pre><p>断开用指令adb disconnect ip, ok了.</p>
+</div></article><article><header><h2><a href="/2016/03/19/ssh-key/">ssh的密钥机制</a></h2></header><div class="article-meta clearfix"><time class="left">2016-03-19</time><ul class="tags left"></ul><ul class="tags right"><li><a href="/tags/ssh/">ssh</a></li></ul></div><div class="markdown-body"><p>一直对ssh公钥私钥机制不是很了解，今天研究了下，做个记录。<br>首先我们知道ssh不是明文传输的，所以才需要加密。ssh登陆的准备工作可以分成俩个阶段。本次会话的密钥生成和认证过程。因为在时序上，认证过程晚于会话密钥的生成，因此先讲会话密钥的生成。</p>
+<h2 id="会话密钥生成"><a href="#会话密钥生成" class="headerlink" title="会话密钥生成"></a>会话密钥生成</h2><p>服务器每次sshd服务启动时，会主动去查找/etc/ssh/ssh_host*目录，如果没有公钥私钥文件，就会生成新的密钥对，这里的密钥暂且称为key1，当sshd收到客户端的连接请求时，服务器会将key1_pub发送给客户端，此处是明码传送，反正公钥就是在网络上分发给别人用的嘛，这里也不需要担心什么。同时:</p>
+<ol>
+<li>服务器生成会话id，发送给客户端。</li>
+<li>客户端生成会话密钥key2，设为 key2，并计算 r = id xor key2_pub。</li>
+<li>客户端将 r 用key1_pub进行加密，结果发送给服务器。</li>
+<li>服务器用 key1_pri进行解密，获得 r。</li>
+<li>服务器进行 r xor id 的运算，获得 key2_pub。</li>
+<li>至此服务器和客户端都知道了会话密钥key2_pub，以后的传输都将被key2_pub加密。</li>
+</ol>
+<p>可以看到，key2_pub传输是加密的。</p>
+<h2 id="认证过程"><a href="#认证过程" class="headerlink" title="认证过程"></a>认证过程</h2><p>认证过程可以分为俩种，基于密码的认证和基于密钥机制的认证，密码认证很直观，每次客户端连接sshd服务器都要输入密码口令，这样搞不是很方便，单单每次输入密码就很麻烦，再者，比如一个账号分发给多人登陆每改一次密码就要通知多个人。更方便的做法是客户端生成一个公私钥对，这里且命名为key3，在登陆前将key3的公钥key3_pub上传到要登陆的远程sshd服务器，之后:</p>
+<ol>
+<li>服务器生成一个随机数 x，并用 key3_pub加密后生成结果 f(x)，发送给客户端</li>
+<li>客户端使用 key3_pri 解密 f(x) 得到 x</li>
+<li>客户端计算 key2_pri + x 的 md5 值 n(key2_pri+x)，并发给服务器</li>
+<li>服务器计算 key2_pub + x 的 md5 值 m(key2_pub+x)</li>
+<li>服务器比较 m(key2_pub+x) 和 n(key2_pri+x)，两者相同则认证成功</li>
+</ol>
+<p>因此，认证过程的密钥和本次会话密钥是不一样的，所以一个基于密钥认证的ssh过程，涉及到三个不同的密钥对。最后的结果是，服务器持有key1_pri和key2_pub，客户端持有key2_pri和key1_pub，是不一样的，所以叫作非对称式密钥系统。同时，会话密钥是客户端随机运算产生于本次连接的，因此是暂时性的，不同的连接，会话密钥可能是不同的，此后的数据传输阶段由key1，key2参与，双向的过程都遵循公钥加密，私钥解密的原则。至于认证过程的密钥key_3，如其名，仅仅是参与认证的开始阶段而已。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ol>
+<li><a href="http://linux.vbird.org/linux_server/0310telnetssh.php" target="_blank" rel="external">鸟哥的linux私房菜服务篇</a></li>
+</ol>
+</div></article><div class="archive-pagination"><div class="paginator"><span class="page-number current">1</span><a class="page-number" href="/archives/page/2/">2</a><a class="page-number" href="/archives/page/3/">3</a><a class="page-number" href="/archives/page/4/">4</a><a class="extend next" rel="next" href="/archives/page/2/">&raquo;</a></div></div></div><div class="block-sidebar column one-fourth"><script>(function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);})(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st'); _st('install','4iWYoyCGR2xYxThDee2u','2.0.0');
+</script><div class="widget text-content"><p>cser，码农</p>
+<ul>
+<li><p>交流经验</p>
+</li>
+<li><p>记录生活</p>
+</li>
+</ul>
+</div><div class="widget tags"><ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Android/">Android</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/docker/">docker</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/gitlab/">gitlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/">linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql/">mysql</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nagios/">nagios</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nginx/">nginx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ssh/">ssh</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/vpn-server/">vpn server</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/生活/">生活</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/记录/">记录</a></li></ul></div><div class="widget archives"><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">四月 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">三月 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/02/">二月 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">七月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li></ul></div><div class="widget text-content"><p>Links</p>
+<p><a href="http://answ.me">安大哥</a></p>
+<p><a href="http://cshuo.xyz">cshuo</a></p>
+</div><div class="widget text-content"><iframe width="100%" height="250" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=210&fansRow=2&ptype=1&speed=0&skin=5&isTitle=0&noborder=0&isWeibo=1&isFans=0&uid=2181239377&verifier=05803203&dpc=1"></iframe></div><div class="widget text-content"><script>var cnzz_protocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cspan id='cnzz_stat_icon_1255937628'%3E%3C/span%3E%3Cscript src='" + cnzz_protocol + "s95.cnzz.com/z_stat.php%3Fid%3D1255937628' type='text/javascript'%3E%3C/script%3E"));</script><script>(function(){var bp = document.createElement('script');bp.src = '//push.zhanzhang.baidu.com/push.js';var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(bp, s);})();</script></div></div></div></div><script>window.duoshuoQuery = {short_name: 'mengzs'}</script><script src="https://static.duoshuo.com/embed.js"></script></body></html>

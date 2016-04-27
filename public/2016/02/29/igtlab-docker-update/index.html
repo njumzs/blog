@@ -1,0 +1,33 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/blog.jpg"><link rel="alternate" type="application/rss+xml" title="mzs的博客" href="http://moon.nju.edu.cn/spar/people/mzs/mzs.html"><link rel="stylesheet" href="/styles.css"><title>gitlab-docker更新指南 | mzs的博客</title></head><body><div class="container"><div class="columns page-header"><h1>mzs的博客</h1></div><div class="columns"><div class="navigation"><nav class="menus-main"><a href="/" class="favicon"><img alt="mzs的博客" src="/blog.jpg"></a><a href="/">首页</a><a href="/album_list/">相册</a><a href="http://moon.nju.edu.cn/spar/people/mzs/mzs.html">关于我</a></nav><nav class="right menus-right"><a href="/atom.xml">RSS</a></nav></div></div><div class="columns"><div class="block-body column three-fourths"><article><header><small class="right"><a target="_blank" href="null_posts%2F2016-02-29%23gitlab-docker%E6%9B%B4%E6%96%B0%E6%8C%87%E5%8D%97.md">查看源代码</a></small><h2>gitlab-docker更新指南</h2></header><div class="article-meta clearfix"><time class="left">2016-02-29</time><ul class="tags left"></ul><ul class="tags right"><li><a href="/tags/gitlab/">gitlab</a></li></ul></div><div class="markdown-body"><h2 id="1-build新版本的gitlab的docker-image文件"><a href="#1-build新版本的gitlab的docker-image文件" class="headerlink" title="1. build新版本的gitlab的docker image文件"></a>1. build新版本的gitlab的docker image文件</h2><pre><code>cd ~/dockerimages/gitlab/no-nrpe;
+</code></pre><p>修改Dockerfile中FROM指令gitlab为最新版本号,然后:</p>
+<pre><code>docker build -t docker.answ.me:5000/aplusplus/gitlab:8.5.1 .     #本次更新的版本号为8.5.1
+</code></pre><p>build过程时间会略长,之后会生成新的gitlab image文件，之后的过程都在/ICSapps/compose-file/ics目录下：</p>
+<pre><code>cd /ICSapps/compose-file/ics
+</code></pre><h2 id="2-接下来build数据库和redis-这一块不一定需要，因为redis和postgresql版本更新的很慢"><a href="#2-接下来build数据库和redis-这一块不一定需要，因为redis和postgresql版本更新的很慢" class="headerlink" title="2. 接下来build数据库和redis(这一块不一定需要，因为redis和postgresql版本更新的很慢)"></a>2. 接下来build数据库和redis(这一块不一定需要，因为redis和postgresql版本更新的很慢)</h2><pre><code>cd /ICSapps/compose-file/ics
+docker-compose stop; #把三个进程都停掉
+</code></pre><p>然后pull 数据库和redis的image:</p>
+<pre><code>docker pull docker.answ.me:5000/aplusplus/redis
+docker pull docker.answ.me:5000/aplusplus/postgresql:9.4-13  #新的版本号,要改
+docker-compose up -d
+</code></pre><h2 id="3-备份数据-如果无需更新redis和postgresql-可直接到这步"><a href="#3-备份数据-如果无需更新redis和postgresql-可直接到这步" class="headerlink" title="3. 备份数据(如果无需更新redis和postgresql,可直接到这步)"></a>3. 备份数据(<strong>如果无需更新redis和postgresql,可直接到这步</strong>)</h2><p>先停掉gitlab:</p>
+<pre><code>docker-compose stop gitlab
+screen -S i
+</code></pre><p>修改<strong>backup.sh</strong>中的版本,然后运行该脚本,进行数据备份(修改为这次要备份的版本号),这个过程要花费一些时间</p>
+<h2 id="4-重新启动"><a href="#4-重新启动" class="headerlink" title="4. 重新启动"></a>4. 重新启动</h2><pre><code>docker-compose stop
+docker-compose rm -vf #删除已经stop的container,container里边不存有数据,因为数据都在数据库和挂载到主机的目录里,因此可以放心删除之
+vi docker-compose.yml #修改所有的版本号,三个软件的
+docker-compose up -d
+</code></pre><p>最后更新完成,全程需要root权限。</p>
+</div><div data-thread-key="igtlab-docker-update" data-title="gitlab-docker更新指南" data-url="http://mengzs.tk/2016/02/29/igtlab-docker-update/" class="ds-thread"></div></article></div><div class="block-sidebar column one-fourth"><script>(function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);})(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st'); _st('install','4iWYoyCGR2xYxThDee2u','2.0.0');
+</script><div class="widget text-content"><p>cser，码农</p>
+<ul>
+<li><p>交流经验</p>
+</li>
+<li><p>记录生活</p>
+</li>
+</ul>
+</div><div class="widget tags"><ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Android/">Android</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/docker/">docker</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/gitlab/">gitlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/">linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql/">mysql</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nagios/">nagios</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nginx/">nginx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ssh/">ssh</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/vpn-server/">vpn server</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/生活/">生活</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/记录/">记录</a></li></ul></div><div class="widget archives"><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">四月 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">三月 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/02/">二月 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">七月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li></ul></div><div class="widget text-content"><p>Links</p>
+<p><a href="http://answ.me">安大哥</a></p>
+<p><a href="http://cshuo.xyz">cshuo</a></p>
+</div><div class="widget text-content"><iframe width="100%" height="250" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=210&fansRow=2&ptype=1&speed=0&skin=5&isTitle=0&noborder=0&isWeibo=1&isFans=0&uid=2181239377&verifier=05803203&dpc=1"></iframe></div><div class="widget text-content"><script>var cnzz_protocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cspan id='cnzz_stat_icon_1255937628'%3E%3C/span%3E%3Cscript src='" + cnzz_protocol + "s95.cnzz.com/z_stat.php%3Fid%3D1255937628' type='text/javascript'%3E%3C/script%3E"));</script><script>(function(){var bp = document.createElement('script');bp.src = '//push.zhanzhang.baidu.com/push.js';var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(bp, s);})();</script></div></div></div></div><script>window.duoshuoQuery = {short_name: 'mengzs'}</script><script src="https://static.duoshuo.com/embed.js"></script></body></html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/blog.jpg"><link rel="alternate" type="application/rss+xml" title="mzs的博客" href="http://moon.nju.edu.cn/spar/people/mzs/mzs.html"><link rel="stylesheet" href="/styles.css"><title>mzs的博客</title></head><body><div class="container"><div class="columns page-header"><h1>mzs的博客</h1></div><div class="columns"><div class="navigation"><nav class="menus-main"><a href="/" class="favicon"><img alt="mzs的博客" src="/blog.jpg"></a><a href="/">首页</a><a href="/album_list/">相册</a><a href="http://moon.nju.edu.cn/spar/people/mzs/mzs.html">关于我</a></nav><nav class="right menus-right"><a href="/atom.xml">RSS</a></nav></div></div><div class="columns"><div class="block-body column three-fourths"><article><header><h2><a href="/2016/02/29/igtlab-docker-update/">gitlab-docker更新指南</a></h2></header><div class="article-meta clearfix"><time class="left">2016-02-29</time><ul class="tags left"></ul><ul class="tags right"><li><a href="/tags/gitlab/">gitlab</a></li></ul></div><div class="markdown-body"><h2 id="1-build新版本的gitlab的docker-image文件"><a href="#1-build新版本的gitlab的docker-image文件" class="headerlink" title="1. build新版本的gitlab的docker image文件"></a>1. build新版本的gitlab的docker image文件</h2><pre><code>cd ~/dockerimages/gitlab/no-nrpe;
+</code></pre><p>修改Dockerfile中FROM指令gitlab为最新版本号,然后:</p>
+<pre><code>docker build -t docker.answ.me:5000/aplusplus/gitlab:8.5.1 .     #本次更新的版本号为8.5.1
+</code></pre><p>build过程时间会略长,之后会生成新的gitlab image文件，之后的过程都在/ICSapps/compose-file/ics目录下：</p>
+<pre><code>cd /ICSapps/compose-file/ics
+</code></pre><h2 id="2-接下来build数据库和redis-这一块不一定需要，因为redis和postgresql版本更新的很慢"><a href="#2-接下来build数据库和redis-这一块不一定需要，因为redis和postgresql版本更新的很慢" class="headerlink" title="2. 接下来build数据库和redis(这一块不一定需要，因为redis和postgresql版本更新的很慢)"></a>2. 接下来build数据库和redis(这一块不一定需要，因为redis和postgresql版本更新的很慢)</h2><pre><code>cd /ICSapps/compose-file/ics
+docker-compose stop; #把三个进程都停掉
+</code></pre><p>然后pull 数据库和redis的image:</p>
+<pre><code>docker pull docker.answ.me:5000/aplusplus/redis
+docker pull docker.answ.me:5000/aplusplus/postgresql:9.4-13  #新的版本号,要改
+docker-compose up -d
+</code></pre><h2 id="3-备份数据-如果无需更新redis和postgresql-可直接到这步"><a href="#3-备份数据-如果无需更新redis和postgresql-可直接到这步" class="headerlink" title="3. 备份数据(如果无需更新redis和postgresql,可直接到这步)"></a>3. 备份数据(<strong>如果无需更新redis和postgresql,可直接到这步</strong>)</h2><p>先停掉gitlab:</p>
+<pre><code>docker-compose stop gitlab
+screen -S i
+</code></pre><p>修改<strong>backup.sh</strong>中的版本,然后运行该脚本,进行数据备份(修改为这次要备份的版本号),这个过程要花费一些时间</p>
+<h2 id="4-重新启动"><a href="#4-重新启动" class="headerlink" title="4. 重新启动"></a>4. 重新启动</h2><pre><code>docker-compose stop
+docker-compose rm -vf #删除已经stop的container,container里边不存有数据,因为数据都在数据库和挂载到主机的目录里,因此可以放心删除之
+vi docker-compose.yml #修改所有的版本号,三个软件的
+docker-compose up -d
+</code></pre><p>最后更新完成,全程需要root权限。</p>
+</div></article><article><header><h2><a href="/2016/02/25/nginx-docker/">用nginx反向代理docker来代替publish端口</a></h2></header><div class="article-meta clearfix"><time class="left">2016-02-25</time><ul class="tags left"></ul><ul class="tags right"><li><a href="/tags/docker/">docker</a></li><li><a href="/tags/nginx/">nginx</a></li></ul></div><div class="markdown-body"><p>我们知道docker默认是可以访问外网的，这是由于网桥(默认网桥是虚拟出来的docker0)的存在，而如果想从外网访问docker容器应用，一般的做法是启动docker时用publish作端口映射，其实俩种做法本质上都是修改了本地的iptables NAT规则，所以即使不用显示地publish，直接修改本机的iptables规则应该就可以实现这个功能，但是我还太菜搞不来。<a href="https://www.ttlsa.com/nginx/use-nginx-proxy/" target="_blank" rel="external">端口映射会有一些问题</a>。所以可以用nginx作反向代理替代之。</p>
+<p>反向代理和正向代理的区别具体可以自行google。泛化的理解就是区网的主机访问外网要用正向代理，而外网访问区网的则某台主机是要通过反向代理的。所以一般的VPN属于正向代理，好，言归正传。</p>
+<p>我的网络拓扑是这样的:</p>
+<ul>
+<li>一台pc主机,静态ip为A,是公网ip.</li>
+<li>pc上运行一个<a href="https://github.com/sameersbn/docker-gitlab" target="_blank" rel="external">gitlab docker</a>，该容器ip为B，是内网ip，已经在build image时expose 80端口。</li>
+</ul>
+<p>我的目标是在任意主机浏览器输入A(或者绑定到A的域名),能够访问到该gitlab.</p>
+<p>nginx的安装ubuntu下可用apt轻松搞定,配置文件目录在<strong>/etc/nginx/</strong>，不得不说，<a href="https://www.digitalocean.com/community/tutorials/understanding-the-nginx-configuration-file-structure-and-configuration-contexts" target="_blank" rel="external">nginx配置文件结构极其简单</a>，之前研究过nagios和apache的配置文件，都比nginx要复杂些。配置文件主要为<strong>nginx.conf</strong>。</p>
+<p>该文件分成四个部分：</p>
+<ul>
+<li>main（全局设置）</li>
+<li>server（主机设置）</li>
+<li>upstream（上游服务器设置，主要为反向代理、负载均衡相关配置）</li>
+<li>location（URL匹配特定位置后的设置），每部分包含若干个指令</li>
+</ul>
+<p>main部分设置的指令将影响其它所有部分的设置；server部分的指令主要用于指定虚拟主机域名、IP和端口；upstream的指令用于设置一系列的后端服务器，设置反向代理及后端服务器的负载均衡；location部分用于匹配网页位置（比如，根目录“/”,“/images”,等等）。他们之间的关系式：server继承main，location继承server；upstream既不会继承指令也不会被继承。具体的区别同样可以google之,其他的配置文件不是必须的,或者说是可以自己在<strong>nginx.conf</strong>中指定和调整的,因此在nginx中,nginx.conf这个文件是最重要的。</p>
+<p>因此一个主机对应一个server对象,server的定义可以放在任何文件中,只要在<strong>nginx.conf</strong>中正确位置include进来就可以了,比如我在<strong>/etc/nginx/</strong>目录下随便新建mzs.conf，文件内容:</p>
+<pre><code>server
+{
+listen 80; #也可以添加要监听的ip地址，格式为ip:port
+server_name A; #这个server name是包含在request包头部的，就是用户在浏览器输入的地址，不是本地！
+location / {
+    proxy_redirect off;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_pass http://B:80;    #反向代理到docker B:80
+}
+}
+</code></pre><p>在nginx.conf中修改:</p>
+<pre><code># Virtual Host Configs
+include /etc/nginx/conf.d/*.conf;
+include /etc/nginx/sites-enabled/*;
+include /etc/nginx/mzs.conf;  #添加了这一行就可以了.
+</code></pre><p>添加这一行的目的是把server的配置include进来,因此也可以直接在nginx.conf文件对应位置放置mzs.conf的内容，<br>另一种配置方式(同样在<em>nginx.conf</em>中)，设定负载均衡后台服务器列表,可以是多个 :</p>
+<pre><code>upstream  backend  { 
+          server   B:80 max_fails=2 fail_timeout=30s ;  
+          #server   192.168.10.101:8080 max_fails=2 fail_timeout=30s ;  
+}
+server {
+    listen       80;
+    server_name  A;
+    #对 / 所有做负载均衡+反向代理
+    location / {
+        root   /apps/oaapp;
+        index  index.jsp index.html index.htm;
+        #请求转向backend定义的服务器列表，即反向代理，对应upstream负载均衡器。也可以proxy_pass http://ip:port
+        proxy_pass        http://backend;   
+        proxy_redirect off;
+        #后端的Web服务器可以通过X-Forwarded-For获取用户真实IP
+        proxy_set_header  Host  $host;
+        proxy_set_header  X-Real-IP  $remote_addr;  
+        proxy_set_header  X-Forwarded-For  $proxy_add_x_forwarded_for;
+        proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
+    }
+</code></pre><p>即把docker的ip:port配置在upstream中,这样如果一个域名指向多个ip的server,就可以实现负载均衡,proxy_pass的时候再对应负载均衡器的名字就可以了.比如google,每次访问请求到达后台哪个服务器,大概也是这样的实现原理.<br>最后root权限运行:</p>
+<pre><code>service nginx reload
+serivce nginx restart
+</code></pre><p>搞定，当然也可以把nginx放在docker容器中。另外，所谓的端口映射其实就是一种iptables的DNAT过程而已。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考:"></a>参考:</h2><ol>
+<li><a href="http://seanlook.com/2015/06/02/nginx-cache-check/" target="_blank" rel="external">nginx做负载均衡器以及proxy缓存配置</a></li>
+<li><a href="http://www.ha97.com/5194.html" target="_blank" rel="external">Nginx配置文件nginx.conf中文详解</a></li>
+<li><a href="https://segmentfault.com/a/1190000002797601" target="_blank" rel="external">nginx服务器安装及配置文件详解</a></li>
+<li><a href="http://jasonwilder.com/blog/2014/03/25/automated-nginx-reverse-proxy-for-docker/" target="_blank" rel="external">Automated Nginx Reverse Proxy for Docker</a></li>
+</ol>
+</div></article><div class="archive-pagination"><div class="paginator"><a class="extend prev" rel="prev" href="/archives/2016/">&laquo;</a><a class="page-number" href="/archives/2016/">1</a><span class="page-number current">2</span></div></div></div><div class="block-sidebar column one-fourth"><script>(function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);})(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st'); _st('install','4iWYoyCGR2xYxThDee2u','2.0.0');
+</script><div class="widget text-content"><p>cser，码农</p>
+<ul>
+<li><p>交流经验</p>
+</li>
+<li><p>记录生活</p>
+</li>
+</ul>
+</div><div class="widget tags"><ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Android/">Android</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/docker/">docker</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/gitlab/">gitlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/">linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql/">mysql</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nagios/">nagios</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nginx/">nginx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ssh/">ssh</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/vpn-server/">vpn server</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/生活/">生活</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/记录/">记录</a></li></ul></div><div class="widget archives"><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">四月 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">三月 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/02/">二月 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">七月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li></ul></div><div class="widget text-content"><p>Links</p>
+<p><a href="http://answ.me">安大哥</a></p>
+<p><a href="http://cshuo.xyz">cshuo</a></p>
+</div><div class="widget text-content"><iframe width="100%" height="250" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=210&fansRow=2&ptype=1&speed=0&skin=5&isTitle=0&noborder=0&isWeibo=1&isFans=0&uid=2181239377&verifier=05803203&dpc=1"></iframe></div><div class="widget text-content"><script>var cnzz_protocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cspan id='cnzz_stat_icon_1255937628'%3E%3C/span%3E%3Cscript src='" + cnzz_protocol + "s95.cnzz.com/z_stat.php%3Fid%3D1255937628' type='text/javascript'%3E%3C/script%3E"));</script><script>(function(){var bp = document.createElement('script');bp.src = '//push.zhanzhang.baidu.com/push.js';var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(bp, s);})();</script></div></div></div></div><script>window.duoshuoQuery = {short_name: 'mengzs'}</script><script src="https://static.duoshuo.com/embed.js"></script></body></html>

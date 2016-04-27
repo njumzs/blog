@@ -1,0 +1,58 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/blog.jpg"><link rel="alternate" type="application/rss+xml" title="mzs的博客" href="http://moon.nju.edu.cn/spar/people/mzs/mzs.html"><link rel="stylesheet" href="/styles.css"><title>标签：vpn server | mzs的博客</title></head><body><div class="container"><div class="columns page-header"><h1>mzs的博客</h1></div><div class="columns"><div class="navigation"><nav class="menus-main"><a href="/" class="favicon"><img alt="mzs的博客" src="/blog.jpg"></a><a href="/">首页</a><a href="/album_list/">相册</a><a href="http://moon.nju.edu.cn/spar/people/mzs/mzs.html">关于我</a></nav><nav class="right menus-right"><a href="/atom.xml">RSS</a></nav></div></div><div class="columns"><div class="block-body column three-fourths"><div class="archive-title"><strong>标签 #vpn server</strong></div><article><header><h2><a href="/2015/07/24/vpn-server/">linux搭建简单的vpn server</a></h2></header><div class="article-meta clearfix"><time class="left">2015-07-24</time><ul class="tags left"></ul><ul class="tags right"><li><a href="/tags/vpn-server/">vpn server</a></li><li><a href="/tags/linux/">linux</a></li></ul></div><div class="markdown-body"><p>这几天跑实验，内网服务器想连外网，于是就想到在自己电脑搭一个vpn server来搞。今天折腾大半天搞定了，这里简单记录下操作步骤。</p>
+<p>1.使用pptpd,所以先安装:</p>
+<pre><code>sudo apt-get install pptpd
+</code></pre><p>修改<strong>/etc/pptpd.conf</strong>这个文件:</p>
+<p>找到以下俩行：</p>
+<pre><code>#localip 192.168.0.1
+#remoteip 192.168.0.234-238,192.168.0.245
+</code></pre><p>把前面的#号去掉，然后保存就行了。这里，localip 是 VPN 链接成功后服务器的 ip 地址， 最后会是是你客户端的网关,remoteip 则客户端的可分配 ip 地址范围.最大连接数有默认限制,不过可以修改.其实随便在可用内网ip范围改啦：</p>
+<ul>
+<li>–10.0.0.0/8：10.0.0.0～10.255.255.255 </li>
+<li>–172.16.0.0/12：172.16.0.0～172.31.255.255 </li>
+<li>–192.168.0.0/16：192.168.0.0～192.168.255.255</li>
+</ul>
+<p>编辑<strong>/etc/ppp/pptpd-options</strong>这个文件,为VPN指定DNS服务器，找到ms-dns这项，去掉前面的#号，修改成google提供的DNS</p>
+<pre><code>ms-dns 8.8.8.8
+ms-dns 8.8.4.4
+</code></pre><p>这是google的公开DNS ip,不过后来发现部分国内网站的解析会有问题,所以最后换成了ali的,这个问题就解决了.我把它归因于GFW，修改好后保存。</p>
+<hr>
+<p>接下来建立VPN账号和密码了，修改<strong>/etc/ppp/chap-secrets</strong>文件，按一行四列添加：</p>
+<ul>
+<li>账号</li>
+<li>服务器名 </li>
+<li>密码</li>
+<li>IP</li>
+</ul>
+<p>即第一行是用户名，第二行是服务器名（默认写pptpd 即可，注意与 pptpd-options 文件保持一致,要改的话俩个地方都要改保持一致,不过没有意义），第三行是密码，第四列是 IP 限制（不做限制用 * ）。如创建一个名为test，密码为123，不限制登录IP的VPN账号：</p>
+<pre><code>mzs pptpd 123 *
+</code></pre><p>多个账号另起一行就可以了.如果限制登陆地点,可以修改*处另作文章。重启：</p>
+<pre><code>service pptpd restart
+service pppd-dns restart
+</code></pre><p>此时就可以用一个vpn客户端来登陆了,不过<strong>还不能连外网</strong>。<br>修改<strong>/etc/sysctl.conf</strong>这个文件，把ipv4 forward开启，方法是找到<strong>/etc/sysctl.conf</strong>这个文件里的这一行：</p>
+<pre><code>#net.ipv4.ip_forward=1
+</code></pre><p>去掉前面的#号，使之生效，然后保存，运行命令sysctl –p。如果显示：</p>
+<pre><code>net.ipv4.ip_forward = 1
+</code></pre><p>这样初步搭完了,但是不能连外网,我在这个坑里跳了很久，要继续操作.</p>
+<hr>
+<p><strong>下边这边部分不是很懂，今天还没来得及研究，日后有理解补上来，</strong><br><strong>弄懂了，补上来，将要从eth0出去的包，来源Ip，也就是从内网来的数据包，都替换成vpn server的public ip，这边是所谓的NAT，postrouting修改来源ip，prerouting则修改目的ip，一个是SNAT，一个是DNAT</strong> </p>
+<p>设置iptables规则<br>首先配置nat表的翻译规则, 将目标IP为192.168.0.0/24的包转向eth0接口. 在iptables配置文件的nat表中添加如下规则,指令:(如果有需要,先安装iptables)</p>
+<pre><code>iptables -t nat -A POSTROUTING -s 192.168.0.0/24 -o eth0 -j MASQUERADE
+</code></pre><p>OK，到了这一步就应该可以用VPN了。如果不能，我也不知是哪里出问题了。<br>如果要防止重启服务器后iptables丢失，先运行：</p>
+<pre><code>iptables-save &gt; /etc/iptables-rules
+</code></pre><p>然后修改<strong>/etc/network/interfaces</strong>文件，在eth0 下面加入：</p>
+<pre><code>pre-up iptables-restore &lt; /etc/iptables-rules
+</code></pre><p>这样，服务器重启后，就能自动挂载规则了。可以考虑租个服务器卖翻墙vpn了。</p>
+<hr>
+</div></article><div class="archive-pagination"><div class="paginator"><span class="page-number current">1</span></div></div></div><div class="block-sidebar column one-fourth"><script>(function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);})(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st'); _st('install','4iWYoyCGR2xYxThDee2u','2.0.0');
+</script><div class="widget text-content"><p>cser，码农</p>
+<ul>
+<li><p>交流经验</p>
+</li>
+<li><p>记录生活</p>
+</li>
+</ul>
+</div><div class="widget tags"><ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Android/">Android</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/docker/">docker</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/gitlab/">gitlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/">linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql/">mysql</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nagios/">nagios</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nginx/">nginx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ssh/">ssh</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/vpn-server/">vpn server</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/生活/">生活</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/记录/">记录</a></li></ul></div><div class="widget archives"><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">四月 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">三月 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/02/">二月 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">七月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li></ul></div><div class="widget text-content"><p>Links</p>
+<p><a href="http://answ.me">安大哥</a></p>
+<p><a href="http://cshuo.xyz">cshuo</a></p>
+</div><div class="widget text-content"><iframe width="100%" height="250" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=210&fansRow=2&ptype=1&speed=0&skin=5&isTitle=0&noborder=0&isWeibo=1&isFans=0&uid=2181239377&verifier=05803203&dpc=1"></iframe></div><div class="widget text-content"><script>var cnzz_protocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cspan id='cnzz_stat_icon_1255937628'%3E%3C/span%3E%3Cscript src='" + cnzz_protocol + "s95.cnzz.com/z_stat.php%3Fid%3D1255937628' type='text/javascript'%3E%3C/script%3E"));</script><script>(function(){var bp = document.createElement('script');bp.src = '//push.zhanzhang.baidu.com/push.js';var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(bp, s);})();</script></div></div></div></div><script>window.duoshuoQuery = {short_name: 'mengzs'}</script><script src="https://static.duoshuo.com/embed.js"></script></body></html>
